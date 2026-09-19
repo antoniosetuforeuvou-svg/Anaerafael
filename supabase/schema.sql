@@ -8,7 +8,7 @@ create table if not exists public.evento (
   id int primary key default 1 check (id = 1),
   codigo text not null
 );
-insert into public.evento (codigo) values ('TROQUE-ESTE-CODIGO')
+insert into public.evento (codigo) values ('ANAERAFA101026')
 on conflict (id) do update set codigo = excluded.codigo;
 
 -- 2) Tabelas
