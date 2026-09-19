@@ -20,6 +20,12 @@
     <!-- Passo 1: identificação (só o nome) -->
     <section id="entrar" hidden>
       <div class="fotos-casal" id="fotos-casal"></div>
+
+      <div class="feed" hidden>
+        <h3 class="feed-titulo"><span class="ao-vivo"></span> Fotos da festa ao vivo</h3>
+        <div class="carrossel"><a class="ver" href="galeria.html">Ver todas</a></div>
+      </div>
+
       <p class="mensagem" id="mensagem"></p>
       <h2>Registre os momentos da nossa festa</h2>
       <p class="suave">Digite seu nome — você tem 20 fotos para registrar a festa. Cada foto sai com seu nome embaixo.</p>
@@ -52,6 +58,11 @@
       <div class="cam-rodape">
         <button class="galeria-link" id="usar-galeria" type="button">Enviar da galeria</button>
         <a href="galeria.html">Ver galeria de todos →</a>
+      </div>
+
+      <div class="feed" hidden style="margin-top:1.75rem">
+        <h3 class="feed-titulo"><span class="ao-vivo"></span> Fotos da festa ao vivo</h3>
+        <div class="carrossel"><a class="ver" href="galeria.html">Ver todas</a></div>
       </div>
     </section>
 
@@ -297,6 +308,7 @@
         const bitmap = await createImageBitmap(video);
         await enviarFoto(bitmap);
         aviso("aviso-enviar", "Foto enviada! 📸");
+        carregarFeed();
       } catch (err) {
         if (String(err?.message || "").includes("limite_atingido")) aviso("aviso-enviar", mensagemErro(err), true);
         else tratarErroEnvio(err);
@@ -331,10 +343,63 @@
           falhas++;
         }
       }
-      ocupado = false; atualizar();
+      ocupado = false; atualizar(); carregarFeed();
       if (falhas) aviso("aviso-enviar", `${falhas} foto${falhas > 1 ? "s não foram enviadas" : " não foi enviada"}. Tente de novo.`, true);
       else if (!parar) aviso("aviso-enviar", "Fotos enviadas!");
     });
+
+    // ---- Carrossel "ao vivo" das fotos dos convidados ----
+    const reduzMov = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const carFotos = [];
+    let carChave = "", carIdx = 0, carTimer = null;
+    const carContainers = () => [...document.querySelectorAll(".carrossel")];
+
+    async function carregarFeed() {
+      if (!codigo) return;
+      const { data, error } = await supabase.rpc("listar_fotos", { p_codigo: codigo, p_limite: 30, p_antes: null });
+      if (error || !Array.isArray(data)) return;
+      const chave = data.map((f) => f.caminho).join("|");
+      if (chave === carChave) return; // nada novo
+      carChave = chave; carFotos.length = 0; carFotos.push(...data);
+      renderFeed();
+    }
+
+    function renderFeed() {
+      for (const c of carContainers()) {
+        c.closest(".feed").hidden = carFotos.length === 0;
+        // remove slides antigos, mantém o link "Ver todas"
+        [...c.querySelectorAll(".slide")].forEach((s) => s.remove());
+        const link = c.querySelector("a.ver");
+        carFotos.forEach((f, i) => {
+          const s = document.createElement("div");
+          s.className = "slide" + (i === 0 ? " ativo" : "");
+          const img = new Image();
+          img.src = urlPublica(f.caminho); img.alt = `Foto de ${f.nome}`;
+          img.loading = i < 2 ? "eager" : "lazy";
+          s.append(img);
+          c.insertBefore(s, link);
+        });
+      }
+      carIdx = 0;
+      if (carFotos.length > 1 && !carTimer && !reduzMov) carTimer = setInterval(avancarFeed, 4000);
+    }
+
+    function avancarFeed() {
+      if (carFotos.length < 2) return;
+      const prox = (carIdx + 1) % carFotos.length;
+      for (const c of carContainers()) {
+        const sl = c.querySelectorAll(".slide");
+        sl[carIdx]?.classList.remove("ativo");
+        sl[prox]?.classList.add("ativo");
+      }
+      carIdx = prox;
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) { clearInterval(carTimer); carTimer = null; }
+      else { carregarFeed(); if (carFotos.length > 1 && !carTimer && !reduzMov) carTimer = setInterval(avancarFeed, 4000); }
+    });
+    setInterval(carregarFeed, 30000); // busca fotos novas de tempos em tempos
 
     // ---- Fluxo ----
     async function mostrarEnviar() {
@@ -380,6 +445,8 @@
     if (convidado?.id && codigo) mostrarEnviar();
     else if (!codigo) mostrar("sem-codigo");
     else mostrar("entrar");
+
+    if (codigo) carregarFeed(); // carrossel ao vivo das fotos já enviadas
   </script>
 </body>
 </html>
