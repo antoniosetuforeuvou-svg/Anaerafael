@@ -1,6 +1,6 @@
 # Fotos do casamento
 
-Site estático onde cada convidado envia até 20 fotos. GitHub + Supabase + Vercel, tudo no plano gratuito.
+Site estático que vira uma **câmera descartável** na festa: cada convidado entra só com o nome e ganha 20 fotos para tirar na hora (com o visor da câmera aberto no próprio site), ou enviar da galeria. GitHub + Supabase + Vercel, tudo no plano gratuito.
 
 ## 1. Supabase
 1. Crie um projeto em supabase.com (região São Paulo, se estiver no Brasil).
@@ -20,6 +20,11 @@ Edite `config.js` com a URL, a chave, os nomes do casal e a data.
 Gere um QR code (qualquer gerador gratuito) apontando para:
 `https://SEU-SITE.vercel.app/?c=SEU-CODIGO`
 Quem abrir pelo QR code não precisa digitar o código.
+
+## Câmera ao vivo
+- Ao entrar, o site abre o visor da câmera (pede permissão) com um botão de disparo e o contador "20 fotos restantes", igual a uma câmera descartável.
+- Dá para trocar entre câmera de trás e da frente, e ligar o flash (quando o aparelho permite).
+- Precisa de HTTPS para a câmera funcionar — a Vercel já entrega HTTPS. Se a pessoa negar a permissão, aparece o botão "Enviar da galeria".
 
 ## Login e bloqueio de contas extras
 - O convidado digita só nome e sobrenome. Cada foto sai com "Foto de Fulano" gravado numa faixa embaixo.

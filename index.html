@@ -6,7 +6,7 @@
   <title>Fotos do casamento</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
@@ -18,12 +18,12 @@
 
     <!-- Passo 1: identificação (só o nome) -->
     <section id="entrar" hidden>
-      <h2>Mande suas fotos da festa</h2>
-      <p class="suave">Cada convidado pode enviar até 20 fotos, e cada uma leva seu nome embaixo.</p>
+      <h2>Vire a câmera descartável da festa</h2>
+      <p class="suave">Digite seu nome e você ganha 20 fotos para tirar na hora. Cada foto sai com seu nome embaixo.</p>
       <form id="form-entrar">
         <label for="nome">Nome e sobrenome</label>
         <input id="nome" type="text" autocomplete="name" autocapitalize="words" maxlength="80" required>
-        <button class="botao" type="submit">Entrar e escolher fotos</button>
+        <button class="botao" type="submit">Entrar e abrir a câmera</button>
       </form>
       <p class="aviso" id="aviso-entrar" role="status"></p>
     </section>
@@ -34,18 +34,29 @@
       <p class="suave">Use a câmera do celular no QR code que está nas mesas da festa.</p>
     </section>
 
-    <!-- Passo 2: envio -->
+    <!-- Passo 2: câmera descartável -->
     <section id="enviar" hidden>
       <h2 id="saudacao"></h2>
-      <p class="contador" id="contador" aria-live="polite"></p>
 
-      <div class="folha" id="folha" aria-label="Suas fotos enviadas"></div>
+      <div class="camera">
+        <div class="visor" id="visor">
+          <video id="video" playsinline muted autoplay></video>
+          <div class="clarao" id="clarao"></div>
+          <button class="cam-botao flash" id="flash" type="button" aria-pressed="false" aria-label="Ligar/desligar flash" hidden>⚡</button>
+          <button class="cam-botao trocar" id="trocar" type="button" aria-label="Trocar câmera" hidden>⟲</button>
+          <div class="restantes"><b id="restantes-num">20</b><span>fotos<br>restantes</span></div>
+          <button class="disparo" id="disparo" type="button" aria-label="Tirar foto" disabled></button>
+          <p class="carregando" id="cam-carregando">Abrindo a câmera…</p>
+        </div>
+      </div>
 
-      <label for="arquivos" class="botao" id="botao-escolher" role="button" tabindex="0">Escolher fotos</label>
       <p class="aviso" id="aviso-enviar" role="status"></p>
 
-      <div class="links">
-        <a href="galeria.html">Ver galeria</a>
+      <div class="folha" id="folha" aria-label="Suas fotos"></div>
+
+      <div class="cam-rodape">
+        <button class="galeria-link" id="usar-galeria" type="button">Enviar da galeria</button>
+        <a href="galeria.html">Ver galeria de todos →</a>
       </div>
     </section>
 
@@ -63,7 +74,9 @@
     let convidado = ler("casamento:convidado");
     let enviadas = 0;
     let ocupado = false;
-    let pronto = Promise.resolve();
+
+    // Estado da câmera
+    let stream = null, track = null, facing = "environment", flashLigado = false;
 
     function aviso(id, texto, erro = false) {
       const el = $(id); el.textContent = texto; el.classList.toggle("erro", erro);
@@ -91,27 +104,176 @@
       quadro.prepend(img);
     }
 
-    function atualizarContador() {
+    function atualizar() {
       const faltam = LIMITE - enviadas;
-      $("contador").textContent =
-        faltam === 0 ? "Você enviou suas 20 fotos. Obrigado!" :
-        faltam === 1 ? `${enviadas} enviadas. Cabe mais 1 foto.` :
-        `${enviadas} enviadas. Cabem mais ${faltam} fotos.`;
-      const bloqueado = faltam === 0 || ocupado;
-      $("arquivos").disabled = bloqueado;
-      $("botao-escolher").setAttribute("aria-disabled", String(bloqueado));
-      $("botao-escolher").textContent = ocupado ? "Enviando…" : "Escolher fotos";
+      $("restantes-num").textContent = faltam;
+      $("disparo").disabled = faltam <= 0 || ocupado || !track;
+      $("arquivos").disabled = faltam <= 0 || ocupado;
+      $("usar-galeria").disabled = faltam <= 0 || ocupado;
+      if (faltam <= 0) aviso("aviso-enviar", "Você enviou suas 20 fotos. Obrigado! 🎉");
     }
 
+    // ---- Câmera ----
+    async function iniciarCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        return semCamera('Este navegador não abre a câmera. Toque em "Enviar da galeria".');
+      }
+      try {
+        pararCamera();
+        $("cam-carregando").hidden = false;
+        $("cam-carregando").textContent = "Abrindo a câmera…";
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facing }, width: { ideal: 2400 }, height: { ideal: 2400 } },
+          audio: false,
+        });
+        const video = $("video");
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+        track = stream.getVideoTracks()[0];
+        $("visor").classList.toggle("espelhado", facing === "user");
+        $("cam-carregando").hidden = true;
+        configurarControles();
+        atualizar();
+      } catch (err) {
+        const negado = /NotAllowed|Permission/i.test(String(err?.name || err));
+        semCamera(negado
+          ? 'Permissão da câmera negada. Libere nas configurações do navegador ou toque em "Enviar da galeria".'
+          : 'Não foi possível abrir a câmera. Toque em "Enviar da galeria".');
+      }
+    }
+
+    function pararCamera() {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      stream = null; track = null;
+    }
+
+    function semCamera(msg) {
+      track = null;
+      $("cam-carregando").hidden = false;
+      $("cam-carregando").textContent = msg;
+      $("disparo").disabled = true;
+      $("flash").hidden = true; $("trocar").hidden = true;
+    }
+
+    function configurarControles() {
+      $("trocar").hidden = false;
+      const caps = track.getCapabilities?.() || {};
+      if (caps.torch) { $("flash").hidden = false; }
+      else { $("flash").hidden = true; flashLigado = false; $("flash").setAttribute("aria-pressed", "false"); }
+    }
+
+    $("flash").addEventListener("click", async () => {
+      if (!track) return;
+      flashLigado = !flashLigado;
+      try {
+        await track.applyConstraints({ advanced: [{ torch: flashLigado }] });
+        $("flash").setAttribute("aria-pressed", String(flashLigado));
+      } catch { flashLigado = false; $("flash").hidden = true; }
+    });
+
+    $("trocar").addEventListener("click", async () => {
+      facing = facing === "environment" ? "user" : "environment";
+      flashLigado = false; $("flash").setAttribute("aria-pressed", "false");
+      await iniciarCamera();
+    });
+
+    function piscar() {
+      const c = $("clarao"); c.classList.remove("piscar"); void c.offsetWidth; c.classList.add("piscar");
+    }
+
+    // Envia uma foto (quadro de vídeo OU arquivo). Lança erro para o chamador tratar.
+    async function enviarFoto(fonte) {
+      const quadro = $("folha").children[enviadas];
+      quadro?.classList.add("enviando");
+      let caminho = null;
+      try {
+        const blob = await comprimir(fonte, { assinatura: convidado.nome });
+        const r = await supabase.rpc("reservar_foto", { p_convidado: convidado.id });
+        if (r.error) throw r.error;
+        caminho = r.data;
+        const up = await supabase.storage.from("fotos").upload(caminho, blob, { contentType: "image/jpeg", upsert: false });
+        if (up.error) throw up.error;
+        if (quadro) preencher(quadro, URL.createObjectURL(blob));
+        enviadas++;
+        atualizar();
+      } catch (err) {
+        quadro?.classList.remove("enviando");
+        if (caminho) await supabase.rpc("liberar_foto", { p_convidado: convidado.id, p_caminho: caminho });
+        throw err;
+      }
+    }
+
+    function tratarErroEnvio(err) {
+      const msg = String(err?.message || "");
+      if (msg.includes("convidado_invalido")) {
+        pararCamera(); salvar("casamento:convidado", null); convidado = null;
+        mostrar("entrar"); aviso("aviso-entrar", mensagemErro(err), true);
+        return true; // sessão perdida
+      }
+      aviso("aviso-enviar", mensagemErro(err), true);
+      return false;
+    }
+
+    // Disparo da câmera
+    $("disparo").addEventListener("click", async () => {
+      if (ocupado || !track || enviadas >= LIMITE) return;
+      const video = $("video");
+      if (!video.videoWidth) return;
+      ocupado = true; atualizar(); piscar();
+      try {
+        const bitmap = await createImageBitmap(video);
+        await enviarFoto(bitmap);
+        aviso("aviso-enviar", "Foto enviada! 📸");
+      } catch (err) {
+        if (String(err?.message || "").includes("limite_atingido")) aviso("aviso-enviar", mensagemErro(err), true);
+        else tratarErroEnvio(err);
+      } finally {
+        ocupado = false; atualizar();
+      }
+    });
+
+    // Fallback: enviar da galeria
+    $("usar-galeria").addEventListener("click", () => { if (!$("arquivos").disabled) $("arquivos").click(); });
+
+    $("arquivos").addEventListener("change", async (e) => {
+      const escolhidas = [...e.target.files];
+      e.target.value = "";
+      if (!escolhidas.length || ocupado || !convidado) return;
+      const livres = LIMITE - enviadas;
+      if (livres <= 0) return aviso("aviso-enviar", "Você já enviou suas 20 fotos.", true);
+      const lista = escolhidas.slice(0, livres);
+      aviso("aviso-enviar", escolhidas.length > livres
+        ? `Você escolheu ${escolhidas.length}, mas cabem só mais ${livres}. Enviando as primeiras ${livres}.`
+        : "");
+
+      ocupado = true; atualizar();
+      let falhas = 0, parar = false;
+      for (const arquivo of lista) {
+        try {
+          await enviarFoto(arquivo);
+        } catch (err) {
+          const msg = String(err?.message || "");
+          if (msg.includes("limite_atingido")) { aviso("aviso-enviar", mensagemErro(err), true); parar = true; break; }
+          if (msg.includes("convidado_invalido")) { tratarErroEnvio(err); ocupado = false; return; }
+          falhas++;
+        }
+      }
+      ocupado = false; atualizar();
+      if (falhas) aviso("aviso-enviar", `${falhas} foto${falhas > 1 ? "s não foram enviadas" : " não foi enviada"}. Tente de novo.`, true);
+      else if (!parar) aviso("aviso-enviar", "Fotos enviadas!");
+    });
+
+    // ---- Fluxo ----
     async function mostrarEnviar() {
       mostrar("enviar");
-      $("saudacao").textContent = `Olá, ${convidado.nome.split(" ")[0]}`;
+      $("saudacao").textContent = `Sorria, ${convidado.nome.split(" ")[0]}! 📸`;
       const { data, error } = await supabase.rpc("minhas_fotos", { p_convidado: convidado.id });
       if (error) aviso("aviso-enviar", mensagemErro(error), true);
       const caminhos = (error ? [] : data || []).map((f) => f.caminho);
       enviadas = caminhos.length;
       montarFolha(caminhos);
-      atualizarContador();
+      atualizar();
+      iniciarCamera();
     }
 
     async function entrar(nome) {
@@ -131,65 +293,11 @@
       e.preventDefault();
       const nome = $("nome").value.trim().replace(/\s+/g, " ");
       if (nome.split(" ").length < 2) return aviso("aviso-entrar", "Digite seu nome e sobrenome.", true);
-      // Abre a escolha de fotos já no toque do botão (o navegador exige isso)
-      // enquanto o cadastro acontece em paralelo.
-      $("arquivos").disabled = false;
-      $("arquivos").click();
-      pronto = entrar(nome);
+      entrar(nome);
     });
 
-    $("botao-escolher").addEventListener("keydown", (e) => {
-      if ((e.key === "Enter" || e.key === " ") && !$("arquivos").disabled) { e.preventDefault(); $("arquivos").click(); }
-    });
-
-    $("arquivos").addEventListener("change", async (e) => {
-      const escolhidas = [...e.target.files];
-      e.target.value = "";
-      if (!escolhidas.length || ocupado) return;
-      await pronto;               // espera o login terminar, se ainda estiver rodando
-      if (!convidado) return;     // login falhou: o aviso já está na tela
-
-      const livres = LIMITE - enviadas;
-      if (livres <= 0) return aviso("aviso-enviar", "Você já enviou suas 20 fotos.", true);
-      const lista = escolhidas.slice(0, livres);
-      aviso("aviso-enviar", escolhidas.length > livres
-        ? `Você escolheu ${escolhidas.length}, mas cabem só mais ${livres}. Enviando as primeiras ${livres}.`
-        : "");
-
-      ocupado = true; atualizarContador();
-      let falhas = 0;
-
-      for (const arquivo of lista) {
-        const quadro = $("folha").children[enviadas];
-        quadro.classList.add("enviando");
-        let caminho = null;
-        try {
-          const blob = await comprimir(arquivo, { assinatura: convidado.nome });
-          const r = await supabase.rpc("reservar_foto", { p_convidado: convidado.id });
-          if (r.error) throw r.error;
-          caminho = r.data;
-          const up = await supabase.storage.from("fotos").upload(caminho, blob, { contentType: "image/jpeg", upsert: false });
-          if (up.error) throw up.error;
-          preencher(quadro, URL.createObjectURL(blob));
-          enviadas++;
-          atualizarContador();
-        } catch (err) {
-          quadro.classList.remove("enviando");
-          if (caminho) await supabase.rpc("liberar_foto", { p_convidado: convidado.id, p_caminho: caminho });
-          const msg = String(err?.message || "");
-          if (msg.includes("limite_atingido")) { aviso("aviso-enviar", mensagemErro(err), true); break; }
-          if (msg.includes("convidado_invalido")) {
-            salvar("casamento:convidado", null); convidado = null; ocupado = false;
-            mostrar("entrar"); return aviso("aviso-entrar", mensagemErro(err), true);
-          }
-          falhas++;
-        }
-      }
-
-      ocupado = false; atualizarContador();
-      if (falhas) aviso("aviso-enviar", `${falhas} foto${falhas > 1 ? "s não foram enviadas" : " não foi enviada"}. Escolha de novo para tentar outra vez.`, true);
-      else if (!$("aviso-enviar").classList.contains("erro")) aviso("aviso-enviar", "Fotos enviadas!");
-    });
+    // Libera a câmera ao sair da página
+    window.addEventListener("pagehide", pararCamera);
 
     if (convidado?.id && codigo) mostrarEnviar();
     else if (!codigo) mostrar("sem-codigo");

@@ -48,13 +48,15 @@ export function mensagemErro(err) {
   return "Não foi possível concluir. Tente de novo em instantes.";
 }
 
-async function carregarImagem(file) {
+async function carregarImagem(fonte) {
+  // Já é um quadro desenhável (vídeo da câmera, canvas ou bitmap)? Usa direto.
+  if (fonte && !(fonte instanceof Blob)) return fonte;
   if ("createImageBitmap" in window) {
-    try { return await createImageBitmap(file); } catch { /* tenta o método antigo */ }
+    try { return await createImageBitmap(fonte); } catch { /* tenta o método antigo */ }
   }
   return new Promise((res, rej) => {
     const img = new Image();
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(fonte);
     img.onload = () => { URL.revokeObjectURL(url); res(img); };
     img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("formato_nao_suportado")); };
     img.src = url;
@@ -107,7 +109,8 @@ function desenharAssinatura(ctx, largura, topo, altura, nome) {
 // Reduz para no máx. 1600px, JPEG ~80% (250–500 KB) e grava a assinatura.
 export async function comprimir(file, { assinatura = "", maximo = 1600, qualidade = 0.8 } = {}) {
   const [img] = await Promise.all([carregarImagem(file), carregarFontes()]);
-  const w0 = img.width, h0 = img.height;
+  const w0 = img.videoWidth || img.naturalWidth || img.width;
+  const h0 = img.videoHeight || img.naturalHeight || img.height;
   const escala = Math.min(1, maximo / Math.max(w0, h0));
   const w = Math.round(w0 * escala), h = Math.round(h0 * escala);
   const faixa = assinatura ? Math.round(Math.max(56, Math.min(w, h) * 0.09)) : 0;
