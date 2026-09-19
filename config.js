@@ -17,4 +17,4 @@ export const FOTOS_CASAL = [
 ];
 
 // Frase de boas-vindas (aparece na tela inicial). Deixe "" para esconder.
-export const MENSAGEM = "Que alegria ter você aqui! Vire a câmera descartável da nossa festa e ajude a gente a guardar cada momento. 💛";
+export const MENSAGEM = "Que alegria ter você aqui! Ajude a gente a registrar os momentos da nossa festa e a guardar cada lembrança. 💛";
