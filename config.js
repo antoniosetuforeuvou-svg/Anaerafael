@@ -14,6 +14,7 @@ export const FOTOS_CASAL = [
   "img/casal-1.jpg",
   "img/casal-2.jpg",
   "img/casal-3.jpg",
+  "img/casal-4.jpg",
 ];
 
 // Frase de boas-vindas (aparece na tela inicial). Deixe "" para esconder.

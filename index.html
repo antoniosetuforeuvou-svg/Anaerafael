@@ -12,6 +12,7 @@
 <body>
   <main class="pagina">
     <header class="topo">
+      <img class="logo" src="img/logo.png" alt="" width="140" height="140">
       <h1 data-casal></h1>
       <p class="data" data-data></p>
     </header>
@@ -21,7 +22,7 @@
       <div class="fotos-casal" id="fotos-casal"></div>
       <p class="mensagem" id="mensagem"></p>
       <h2>Registre os momentos da nossa festa</h2>
-      <p class="suave">Digite seu nome e você ganha 20 fotos para tirar na hora. Cada foto sai com seu nome embaixo.</p>
+      <p class="suave">Digite seu nome — você tem 20 fotos para registrar a festa. Cada foto sai com seu nome embaixo.</p>
       <form id="form-entrar">
         <label for="nome">Nome e sobrenome</label>
         <input id="nome" type="text" autocomplete="name" autocapitalize="words" maxlength="80" required>
@@ -136,7 +137,7 @@
       // Tela inicial
       $("resumo").textContent = faltam <= 0
         ? "Você enviou suas 20 fotos. Obrigado! 🎉"
-        : `Você tem ${faltam} foto${faltam > 1 ? "s" : ""} para tirar.`;
+        : `Você tem ${faltam} foto${faltam > 1 ? "s" : ""} para registrar a festa.`;
       $("abrir-camera").disabled = faltam <= 0;
       $("abrir-camera").textContent = faltam <= 0 ? "Fotos enviadas 🎉" : `📸 Abrir a câmera (${faltam})`;
     }
