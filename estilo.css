@@ -122,7 +122,16 @@ a { color: var(--ardosia); }
 .carrossel .slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease; }
 .carrossel .slide.ativo { opacity: 1; }
 .carrossel img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.carrossel a.ver { position: absolute; right: 10px; bottom: 10px; z-index: 2; padding: 0.4rem 0.8rem; border-radius: 999px; background: rgb(10 14 18 / 0.55); color: #fff; font: 600 0.8rem/1 var(--sans); text-decoration: none; }
+.carrossel a.ver { position: absolute; right: 10px; bottom: 10px; z-index: 3; padding: 0.4rem 0.8rem; border-radius: 999px; background: rgb(10 14 18 / 0.55); color: #fff; font: 600 0.8rem/1 var(--sans); text-decoration: none; }
+.carrossel .nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+  width: 44px; height: 44px; border-radius: 999px; border: 0; cursor: pointer;
+  background: rgb(10 14 18 / 0.45); color: #fff; font-size: 1.7rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.carrossel .nav:active { background: rgb(10 14 18 / 0.7); }
+.carrossel .nav.prev { left: 10px; }
+.carrossel .nav.next { right: 10px; }
 @media (prefers-reduced-motion: reduce) { .ao-vivo { animation: none; } .carrossel .slide { transition: none; } }
 .abrir-camera-nota { text-align: center; color: var(--suave); font-size: 0.9rem; margin-top: 0.75rem; }
 

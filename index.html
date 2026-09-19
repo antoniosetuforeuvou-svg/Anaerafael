@@ -23,7 +23,11 @@
 
       <div class="feed" hidden>
         <h3 class="feed-titulo"><span class="ao-vivo"></span> Fotos da festa ao vivo</h3>
-        <div class="carrossel"><a class="ver" href="galeria.html">Ver todas</a></div>
+        <div class="carrossel">
+          <button class="nav prev" type="button" aria-label="Foto anterior">‹</button>
+          <button class="nav next" type="button" aria-label="Próxima foto">›</button>
+          <a class="ver" href="galeria.html">Ver todas</a>
+        </div>
       </div>
 
       <p class="mensagem" id="mensagem"></p>
@@ -62,7 +66,11 @@
 
       <div class="feed" hidden style="margin-top:1.75rem">
         <h3 class="feed-titulo"><span class="ao-vivo"></span> Fotos da festa ao vivo</h3>
-        <div class="carrossel"><a class="ver" href="galeria.html">Ver todas</a></div>
+        <div class="carrossel">
+          <button class="nav prev" type="button" aria-label="Foto anterior">‹</button>
+          <button class="nav next" type="button" aria-label="Próxima foto">›</button>
+          <a class="ver" href="galeria.html">Ver todas</a>
+        </div>
       </div>
     </section>
 
@@ -381,12 +389,17 @@
         });
       }
       carIdx = 0;
-      if (carFotos.length > 1 && !carTimer && !reduzMov) carTimer = setInterval(avancarFeed, 4000);
+      reiniciarTimer();
     }
 
-    function avancarFeed() {
+    function reiniciarTimer() {
+      if (carTimer) { clearInterval(carTimer); carTimer = null; }
+      if (carFotos.length > 1 && !reduzMov) carTimer = setInterval(() => avancarFeed(1), 3000);
+    }
+
+    function avancarFeed(dir = 1) {
       if (carFotos.length < 2) return;
-      const prox = (carIdx + 1) % carFotos.length;
+      const prox = (carIdx + dir + carFotos.length) % carFotos.length;
       for (const c of carContainers()) {
         const sl = c.querySelectorAll(".slide");
         sl[carIdx]?.classList.remove("ativo");
@@ -395,9 +408,18 @@
       carIdx = prox;
     }
 
+    // Setas: passar / voltar (reinicia o cronômetro para não pular logo em seguida)
+    document.querySelectorAll(".carrossel .nav").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        avancarFeed(btn.classList.contains("prev") ? -1 : 1);
+        reiniciarTimer();
+      });
+    });
+
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) { clearInterval(carTimer); carTimer = null; }
-      else { carregarFeed(); if (carFotos.length > 1 && !carTimer && !reduzMov) carTimer = setInterval(avancarFeed, 4000); }
+      else { carregarFeed(); reiniciarTimer(); }
     });
     setInterval(carregarFeed, 30000); // busca fotos novas de tempos em tempos
 
