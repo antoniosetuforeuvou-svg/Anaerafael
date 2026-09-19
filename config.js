@@ -7,6 +7,11 @@ export const CASAL = "Ana Carolina & Rafael";
 export const DATA = "10 de outubro de 2026";
 export const LIMITE = 20; // se mudar aqui, mude também o 20 no schema.sql
 
+// Código do casamento usado quando a pessoa abre o link SEM o QR code (?c=...).
+// Deve ser igual ao código do supabase/schema.sql. Assim o link sozinho já funciona.
+// Deixe "" se quiser voltar a exigir o QR code para entrar.
+export const CODIGO_PADRAO = "ANAERAFA101026";
+
 // Fotos do casal que aparecem na tela inicial e na galeria.
 // Troque os arquivos na pasta img/ (mantendo os nomes) pelas fotos reais,
 // ou mude a lista abaixo. Imagens que não existirem são ignoradas.

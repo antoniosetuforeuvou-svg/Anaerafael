@@ -27,6 +27,8 @@ Gere um QR code (qualquer gerador gratuito) apontando para:
 `https://SEU-SITE.vercel.app/?c=SEU-CODIGO`
 Quem abrir pelo QR code não precisa digitar o código.
 
+O link sozinho (sem `?c=`) também funciona, porque o código fica em `CODIGO_PADRAO` no `config.js`. Se quiser voltar a exigir o QR code para entrar, deixe `CODIGO_PADRAO = ""`.
+
 ## Câmera ao vivo
 - Ao entrar, o site abre o visor da câmera (pede permissão) com um botão de disparo e o contador "20 fotos restantes", igual a uma câmera descartável.
 - Dá para trocar entre câmera de trás e da frente, e ligar o flash (quando o aparelho permite).

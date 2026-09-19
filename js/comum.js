@@ -1,5 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-import { SUPABASE_URL, SUPABASE_KEY, CASAL, DATA } from "../config.js";
+import { SUPABASE_URL, SUPABASE_KEY, CASAL, DATA, CODIGO_PADRAO } from "../config.js";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false },
@@ -25,7 +25,8 @@ export function lerCodigo() {
     history.replaceState(null, "", url);
     return c;
   }
-  return ler("casamento:codigo");
+  // Sem ?c= no link: usa o código guardado no aparelho ou o código padrão do config.
+  return ler("casamento:codigo") || CODIGO_PADRAO || null;
 }
 
 export function urlPublica(caminho) {
