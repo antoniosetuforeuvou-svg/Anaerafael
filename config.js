@@ -6,3 +6,15 @@ export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 export const CASAL = "Ana Carolina & Rafael";
 export const DATA = "10 de outubro de 2026";
 export const LIMITE = 20; // se mudar aqui, mude também o 20 no schema.sql
+
+// Fotos do casal que aparecem na tela inicial e na galeria.
+// Troque os arquivos na pasta img/ (mantendo os nomes) pelas fotos reais,
+// ou mude a lista abaixo. Imagens que não existirem são ignoradas.
+export const FOTOS_CASAL = [
+  "img/casal-1.jpg",
+  "img/casal-2.jpg",
+  "img/casal-3.jpg",
+];
+
+// Frase de boas-vindas (aparece na tela inicial). Deixe "" para esconder.
+export const MENSAGEM = "Que alegria ter você aqui! Vire a câmera descartável da nossa festa e ajude a gente a guardar cada momento. 💛";

@@ -9,7 +9,13 @@ Site estático que vira uma **câmera descartável** na festa: cada convidado en
 4. Em Project Settings > API, copie a Project URL e a chave anon/publishable.
 
 ## 2. Configuração
-Edite `config.js` com a URL, a chave, os nomes do casal e a data.
+Edite `config.js` com a URL, a chave, os nomes do casal, a data e a mensagem de boas-vindas.
+
+### Fotos do casal
+As fotos que aparecem na tela inicial e no topo da galeria ficam na pasta `img/` (`casal-1.jpg`, `casal-2.jpg`, `casal-3.jpg`). Troque esses arquivos pelas fotos reais mantendo os nomes — ou mude a lista `FOTOS_CASAL` no `config.js`. Imagens que não existirem são simplesmente ignoradas. Dica: use fotos na vertical (retrato) para ficarem bonitas lado a lado.
+
+### Câmera
+Ao entrar, o site abre a câmera em tela cheia (estilo câmera descartável): botão de disparo, contador de fotos restantes, troca de câmera, flash e zoom (0.5×/1×/2×, quando o aparelho permite). Dá para fechar a câmera no "✕" e reabrir pelo botão "Abrir a câmera". A câmera só funciona em HTTPS (a Vercel já entrega).
 
 ## 3. GitHub e Vercel
 1. Crie um repositório no GitHub e envie estes arquivos.

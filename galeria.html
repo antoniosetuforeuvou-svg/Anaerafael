@@ -16,6 +16,8 @@
       <p class="data" data-data></p>
     </header>
 
+    <div class="fotos-casal" id="fotos-casal" style="max-width:34rem;margin:0 auto 1.75rem"></div>
+
     <section id="pedir-codigo" hidden style="max-width:34rem;margin:0 auto">
       <form id="form-codigo">
         <label for="codigo">Código do casamento</label>
@@ -39,9 +41,23 @@
 
   <script type="module">
     import { supabase, salvar, lerCodigo, urlPublica, cabecalho, mensagemErro } from "./js/comum.js";
+    import { FOTOS_CASAL } from "./config.js";
 
     cabecalho();
     const $ = (id) => document.getElementById(id);
+
+    // Fotos do casal no topo (some as que não existirem)
+    (function fotosCasal() {
+      const el = $("fotos-casal");
+      if (!el || !Array.isArray(FOTOS_CASAL)) return;
+      for (const src of FOTOS_CASAL) {
+        const img = new Image();
+        img.loading = "lazy"; img.alt = "Foto do casal"; img.src = src;
+        img.onerror = () => { img.remove(); el.classList.toggle("uma", el.children.length === 1); };
+        el.append(img);
+      }
+      el.classList.toggle("uma", el.children.length === 1);
+    })();
     let codigo = lerCodigo();
     let ultima = null;
     const POR_PAGINA = 40;

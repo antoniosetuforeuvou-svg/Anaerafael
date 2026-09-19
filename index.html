@@ -18,6 +18,8 @@
 
     <!-- Passo 1: identificação (só o nome) -->
     <section id="entrar" hidden>
+      <div class="fotos-casal" id="fotos-casal"></div>
+      <p class="mensagem" id="mensagem"></p>
       <h2>Vire a câmera descartável da festa</h2>
       <p class="suave">Digite seu nome e você ganha 20 fotos para tirar na hora. Cada foto sai com seu nome embaixo.</p>
       <form id="form-entrar">
@@ -30,30 +32,21 @@
 
     <!-- Sem código: a pessoa não veio pelo QR code -->
     <section id="sem-codigo" hidden>
+      <div class="fotos-casal" id="fotos-casal-2"></div>
       <h2>Abra pelo QR code</h2>
       <p class="suave">Use a câmera do celular no QR code que está nas mesas da festa.</p>
     </section>
 
-    <!-- Passo 2: câmera descartável -->
+    <!-- Passo 2: tela inicial de envio (a câmera abre em tela cheia) -->
     <section id="enviar" hidden>
       <h2 id="saudacao"></h2>
+      <p class="suave" id="resumo"></p>
 
-      <div class="camera">
-        <div class="visor" id="visor">
-          <video id="video" playsinline muted autoplay></video>
-          <div class="clarao" id="clarao"></div>
-          <button class="cam-botao flash" id="flash" type="button" aria-pressed="false" aria-label="Ligar/desligar flash" hidden>⚡</button>
-          <button class="cam-botao trocar" id="trocar" type="button" aria-label="Trocar câmera" hidden>⟲</button>
-          <div class="zoom" id="zoom" role="group" aria-label="Zoom" hidden></div>
-          <div class="restantes"><b id="restantes-num">20</b><span>fotos<br>restantes</span></div>
-          <button class="disparo" id="disparo" type="button" aria-label="Tirar foto" disabled></button>
-          <p class="carregando" id="cam-carregando">Abrindo a câmera…</p>
-        </div>
-      </div>
-
-      <p class="aviso" id="aviso-enviar" role="status"></p>
+      <button class="botao" id="abrir-camera" type="button">📸 Abrir a câmera</button>
+      <p class="abrir-camera-nota">Toque em “Abrir a câmera” para tirar suas fotos. Você pode fechar e voltar quando quiser.</p>
 
       <div class="folha" id="folha" aria-label="Suas fotos"></div>
+      <p class="aviso" id="aviso-enviar" role="status"></p>
 
       <div class="cam-rodape">
         <button class="galeria-link" id="usar-galeria" type="button">Enviar da galeria</button>
@@ -64,9 +57,24 @@
     <input id="arquivos" class="visualmente-oculto" type="file" accept="image/*" multiple tabindex="-1">
   </main>
 
+  <!-- Câmera em tela cheia -->
+  <div id="camera-tela" class="camera-tela" hidden>
+    <div class="visor" id="visor">
+      <video id="video" playsinline muted autoplay></video>
+      <div class="clarao" id="clarao"></div>
+      <button class="cam-fechar" id="fechar" type="button" aria-label="Fechar câmera">✕</button>
+      <button class="cam-botao flash" id="flash" type="button" aria-pressed="false" aria-label="Ligar/desligar flash" hidden>⚡</button>
+      <button class="cam-botao trocar" id="trocar" type="button" aria-label="Trocar câmera" hidden>⟲</button>
+      <div class="zoom" id="zoom" role="group" aria-label="Zoom" hidden></div>
+      <div class="restantes"><b id="restantes-num">20</b><span>fotos<br>restantes</span></div>
+      <button class="disparo" id="disparo" type="button" aria-label="Tirar foto" disabled></button>
+      <p class="carregando" id="cam-carregando">Abrindo a câmera…</p>
+    </div>
+  </div>
+
   <script type="module">
     import { supabase, ler, salvar, lerCodigo, urlPublica, cabecalho, mensagemErro, comprimir } from "./js/comum.js";
-    import { LIMITE } from "./config.js";
+    import { LIMITE, FOTOS_CASAL, MENSAGEM } from "./config.js";
 
     cabecalho();
     const $ = (id) => document.getElementById(id);
@@ -77,7 +85,7 @@
     let ocupado = false;
 
     // Estado da câmera
-    let stream = null, track = null, facing = "environment", flashLigado = false;
+    let stream = null, track = null, facing = "environment", flashLigado = false, zoomAtual = 1;
 
     function aviso(id, texto, erro = false) {
       const el = $(id); el.textContent = texto; el.classList.toggle("erro", erro);
@@ -85,6 +93,20 @@
 
     function mostrar(secao) {
       for (const s of ["entrar", "sem-codigo", "enviar"]) $(s).hidden = s !== secao;
+    }
+
+    // Fotos do casal (some as que não existirem)
+    function montarFotosCasal(id) {
+      const el = $(id);
+      if (!el || !Array.isArray(FOTOS_CASAL)) return;
+      el.innerHTML = "";
+      for (const src of FOTOS_CASAL) {
+        const img = new Image();
+        img.loading = "lazy"; img.alt = "Foto do casal"; img.src = src;
+        img.onerror = () => { img.remove(); el.classList.toggle("uma", el.children.length === 1); };
+        el.append(img);
+      }
+      el.classList.toggle("uma", el.children.length === 1);
     }
 
     function montarFolha(caminhos) {
@@ -111,13 +133,32 @@
       $("disparo").disabled = faltam <= 0 || ocupado || !track;
       $("arquivos").disabled = faltam <= 0 || ocupado;
       $("usar-galeria").disabled = faltam <= 0 || ocupado;
-      if (faltam <= 0) aviso("aviso-enviar", "Você enviou suas 20 fotos. Obrigado! 🎉");
+      // Tela inicial
+      $("resumo").textContent = faltam <= 0
+        ? "Você enviou suas 20 fotos. Obrigado! 🎉"
+        : `Você tem ${faltam} foto${faltam > 1 ? "s" : ""} para tirar.`;
+      $("abrir-camera").disabled = faltam <= 0;
+      $("abrir-camera").textContent = faltam <= 0 ? "Fotos enviadas 🎉" : `📸 Abrir a câmera (${faltam})`;
     }
 
-    // ---- Câmera ----
+    // ---- Câmera em tela cheia ----
+    function abrirCamera() {
+      if (enviadas >= LIMITE) return;
+      $("camera-tela").hidden = false;
+      document.body.classList.add("trava");
+      iniciarCamera();
+    }
+
+    function fecharCamera() {
+      pararCamera();
+      $("camera-tela").hidden = true;
+      document.body.classList.remove("trava");
+      atualizar();
+    }
+
     async function iniciarCamera() {
       if (!navigator.mediaDevices?.getUserMedia) {
-        return semCamera('Este navegador não abre a câmera. Toque em "Enviar da galeria".');
+        return semCamera('Este navegador não abre a câmera. Feche e toque em "Enviar da galeria".');
       }
       try {
         pararCamera();
@@ -138,8 +179,8 @@
       } catch (err) {
         const negado = /NotAllowed|Permission/i.test(String(err?.name || err));
         semCamera(negado
-          ? 'Permissão da câmera negada. Libere nas configurações do navegador ou toque em "Enviar da galeria".'
-          : 'Não foi possível abrir a câmera. Toque em "Enviar da galeria".');
+          ? 'Permissão da câmera negada. Libere nas configurações do navegador, ou feche e use "Enviar da galeria".'
+          : 'Não foi possível abrir a câmera. Feche e use "Enviar da galeria".');
       }
     }
 
@@ -153,7 +194,7 @@
       $("cam-carregando").hidden = false;
       $("cam-carregando").textContent = msg;
       $("disparo").disabled = true;
-      $("flash").hidden = true; $("trocar").hidden = true;
+      $("flash").hidden = true; $("trocar").hidden = true; $("zoom").hidden = true;
     }
 
     function configurarControles() {
@@ -164,10 +205,8 @@
       montarZoom(caps.zoom);
     }
 
-    let zoomAtual = 1;
     function montarZoom(z) {
       const pill = $("zoom"); pill.innerHTML = "";
-      // Só mostra se o aparelho expõe zoom nativo com uma faixa de verdade.
       if (!z || typeof z.min !== "number" || typeof z.max !== "number" || z.max <= z.min) {
         pill.hidden = true; return;
       }
@@ -178,8 +217,7 @@
       pill.hidden = false;
       for (const v of stops) {
         const b = document.createElement("button");
-        b.type = "button"; b.dataset.z = v;
-        b.textContent = Number.isInteger(v) ? `${v}×` : `${v}×`;
+        b.type = "button"; b.dataset.z = v; b.textContent = `${v}×`;
         b.addEventListener("click", () => aplicarZoom(v));
         pill.append(b);
       }
@@ -207,6 +245,9 @@
       flashLigado = false; $("flash").setAttribute("aria-pressed", "false");
       await iniciarCamera();
     });
+
+    $("fechar").addEventListener("click", fecharCamera);
+    $("abrir-camera").addEventListener("click", abrirCamera);
 
     function piscar() {
       const c = $("clarao"); c.classList.remove("piscar"); void c.offsetWidth; c.classList.add("piscar");
@@ -237,9 +278,9 @@
     function tratarErroEnvio(err) {
       const msg = String(err?.message || "");
       if (msg.includes("convidado_invalido")) {
-        pararCamera(); salvar("casamento:convidado", null); convidado = null;
+        fecharCamera(); salvar("casamento:convidado", null); convidado = null;
         mostrar("entrar"); aviso("aviso-entrar", mensagemErro(err), true);
-        return true; // sessão perdida
+        return true;
       }
       aviso("aviso-enviar", mensagemErro(err), true);
       return false;
@@ -304,7 +345,6 @@
       enviadas = caminhos.length;
       montarFolha(caminhos);
       atualizar();
-      iniciarCamera();
     }
 
     async function entrar(nome) {
@@ -318,6 +358,7 @@
       salvar("casamento:convidado", convidado);
       aviso("aviso-entrar", "");
       await mostrarEnviar();
+      abrirCamera(); // abre a câmera já no gesto do login
     }
 
     $("form-entrar").addEventListener("submit", (e) => {
@@ -329,6 +370,11 @@
 
     // Libera a câmera ao sair da página
     window.addEventListener("pagehide", pararCamera);
+
+    // Conteúdo personalizado
+    if (MENSAGEM) $("mensagem").textContent = MENSAGEM; else $("mensagem").hidden = true;
+    montarFotosCasal("fotos-casal");
+    montarFotosCasal("fotos-casal-2");
 
     if (convidado?.id && codigo) mostrarEnviar();
     else if (!codigo) mostrar("sem-codigo");
