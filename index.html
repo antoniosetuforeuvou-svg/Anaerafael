@@ -44,6 +44,7 @@
           <div class="clarao" id="clarao"></div>
           <button class="cam-botao flash" id="flash" type="button" aria-pressed="false" aria-label="Ligar/desligar flash" hidden>⚡</button>
           <button class="cam-botao trocar" id="trocar" type="button" aria-label="Trocar câmera" hidden>⟲</button>
+          <div class="zoom" id="zoom" role="group" aria-label="Zoom" hidden></div>
           <div class="restantes"><b id="restantes-num">20</b><span>fotos<br>restantes</span></div>
           <button class="disparo" id="disparo" type="button" aria-label="Tirar foto" disabled></button>
           <p class="carregando" id="cam-carregando">Abrindo a câmera…</p>
@@ -160,6 +161,36 @@
       const caps = track.getCapabilities?.() || {};
       if (caps.torch) { $("flash").hidden = false; }
       else { $("flash").hidden = true; flashLigado = false; $("flash").setAttribute("aria-pressed", "false"); }
+      montarZoom(caps.zoom);
+    }
+
+    let zoomAtual = 1;
+    function montarZoom(z) {
+      const pill = $("zoom"); pill.innerHTML = "";
+      // Só mostra se o aparelho expõe zoom nativo com uma faixa de verdade.
+      if (!z || typeof z.min !== "number" || typeof z.max !== "number" || z.max <= z.min) {
+        pill.hidden = true; return;
+      }
+      const candidatos = [0.5, 1, 2, 3].filter((v) => v >= z.min && v <= z.max);
+      if (!candidatos.includes(1) && z.min <= 1 && z.max >= 1) candidatos.push(1);
+      const stops = [...new Set(candidatos)].sort((a, b) => a - b);
+      if (stops.length < 2) { pill.hidden = true; return; }
+      pill.hidden = false;
+      for (const v of stops) {
+        const b = document.createElement("button");
+        b.type = "button"; b.dataset.z = v;
+        b.textContent = Number.isInteger(v) ? `${v}×` : `${v}×`;
+        b.addEventListener("click", () => aplicarZoom(v));
+        pill.append(b);
+      }
+      aplicarZoom(stops.includes(1) ? 1 : stops[0]);
+    }
+
+    async function aplicarZoom(v) {
+      if (!track) return;
+      try { await track.applyConstraints({ advanced: [{ zoom: v }] }); zoomAtual = v; } catch { /* ignora */ }
+      for (const b of $("zoom").children)
+        b.setAttribute("aria-pressed", String(Number(b.dataset.z) === zoomAtual));
     }
 
     $("flash").addEventListener("click", async () => {

@@ -136,6 +136,18 @@ a { color: var(--ardosia); }
 .flash { left: 14px; top: 14px; }
 .trocar { right: 14px; top: 14px; }
 
+/* Seletor de zoom (0.5× / 1× / 2×) */
+.zoom {
+  position: absolute; left: 50%; bottom: 102px; transform: translateX(-50%);
+  display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgb(0 0 0 / 0.45);
+}
+.zoom button {
+  border: 0; background: transparent; color: #fff; cursor: pointer;
+  min-width: 40px; height: 34px; border-radius: 999px;
+  font: 600 0.82rem/1 var(--sans); font-variant-numeric: tabular-nums;
+}
+.zoom button[aria-pressed="true"] { background: rgb(255 255 255 / 0.92); color: #1E2733; }
+
 /* Flash de captura */
 .visor .clarao {
   position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none;
