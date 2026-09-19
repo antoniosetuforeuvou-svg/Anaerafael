@@ -1,0 +1,114 @@
+:root {
+  --fundo: #EEF1F4;
+  --papel: #FFFFFF;
+  --tinta: #1E2733;
+  --suave: #66717E;
+  --ardosia: #4E6A85;
+  --champanhe: #B39359;
+  --linha: #D5DCE3;
+  --erro: #A33A3A;
+  --serif: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --sans: "Albert Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #141A21; --papel: #1C242E; --tinta: #E7ECF1; --suave: #9AA6B3;
+    --ardosia: #8FAAC4; --champanhe: #CDB07A; --linha: #2E3945; --erro: #E08A8A;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--fundo);
+  color: var(--tinta);
+  font: 400 1rem/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+}
+
+.pagina { max-width: 34rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+.pagina.larga { max-width: 64rem; }
+
+.topo { text-align: center; margin-bottom: 2.25rem; }
+.topo h1 {
+  font: italic 500 clamp(2.6rem, 11vw, 3.6rem)/1 var(--serif);
+  margin: 0; letter-spacing: -0.01em;
+}
+.topo .data {
+  margin: 0.9rem auto 0; color: var(--suave); font-size: 0.95rem;
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+}
+.topo .data::before, .topo .data::after {
+  content: ""; width: 2rem; height: 1px; background: var(--champanhe);
+}
+
+h2 { font: 500 1.6rem/1.2 var(--serif); margin: 0 0 0.5rem; }
+p { margin: 0 0 1rem; }
+.suave { color: var(--suave); }
+
+label { display: block; font-weight: 500; margin: 1.1rem 0 0.4rem; }
+input[type="text"] {
+  width: 100%; font: inherit; color: inherit; background: var(--papel);
+  border: 1px solid var(--linha); border-radius: 10px; padding: 0.8rem 0.9rem;
+}
+input[type="text"]:focus { outline: 2px solid var(--ardosia); outline-offset: 1px; border-color: transparent; }
+
+.botao {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  width: 100%; margin-top: 1.4rem; padding: 0.95rem 1.2rem;
+  font: 600 1rem/1 var(--sans); color: #fff; background: var(--ardosia);
+  border: 0; border-radius: 999px; cursor: pointer; text-decoration: none;
+}
+@media (prefers-color-scheme: dark) { .botao { color: #141A21; } }
+.botao:focus-visible, a:focus-visible { outline: 2px solid var(--champanhe); outline-offset: 3px; }
+.botao[aria-disabled="true"], .botao:disabled { opacity: 0.45; cursor: not-allowed; }
+.botao.secundario { background: transparent; color: var(--ardosia); border: 1px solid var(--ardosia); }
+
+a { color: var(--ardosia); }
+.links { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; font-size: 0.95rem; }
+.link-botao { background: none; border: 0; padding: 0; font: inherit; color: var(--suave); text-decoration: underline; cursor: pointer; }
+
+.aviso { min-height: 1.5rem; margin-top: 1rem; font-size: 0.95rem; }
+.aviso.erro { color: var(--erro); }
+
+/* Folha de contato: 20 quadros */
+.folha {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+  background: var(--tinta); padding: 10px; border-radius: 6px; margin: 1.25rem 0 0.5rem;
+}
+.quadro {
+  position: relative; aspect-ratio: 3 / 4; border-radius: 2px; overflow: hidden;
+  background: color-mix(in srgb, var(--fundo) 12%, var(--tinta));
+}
+.quadro span {
+  position: absolute; left: 4px; bottom: 2px; font-size: 0.65rem;
+  color: var(--champanhe); font-variant-numeric: tabular-nums;
+}
+.quadro img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.quadro.cheio { background: var(--champanhe); }
+.quadro.enviando::after {
+  content: ""; position: absolute; inset: 0; background: var(--champanhe);
+  animation: revelar 1.2s ease-in-out infinite alternate;
+}
+@keyframes revelar { from { opacity: 0.15; } to { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .quadro.enviando::after { animation: none; opacity: 0.4; } }
+
+.contador { font: 500 1.15rem/1.3 var(--serif); }
+
+/* Galeria */
+.grade { columns: 2 12rem; column-gap: 10px; }
+.grade figure { margin: 0 0 10px; break-inside: avoid; }
+.grade button { display: block; width: 100%; padding: 0; border: 0; background: var(--linha); cursor: zoom-in; border-radius: 4px; overflow: hidden; }
+.grade img { width: 100%; height: auto; display: block; }
+.grade figcaption { font-size: 0.8rem; color: var(--suave); padding: 0.3rem 0.1rem 0; }
+
+dialog { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 92vh; }
+dialog::backdrop { background: rgb(10 14 18 / 0.88); }
+dialog img { max-width: 96vw; max-height: 84vh; display: block; border-radius: 4px; }
+dialog p { color: #E7ECF1; text-align: center; margin: 0.6rem 0 0; }
+dialog .fechar { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; background: rgb(255 255 255 / 0.15); color: #fff; border: 0; border-radius: 999px; width: 2.5rem; height: 2.5rem; font-size: 1.3rem; cursor: pointer; }
+
+[hidden] { display: none !important; }
+.visualmente-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

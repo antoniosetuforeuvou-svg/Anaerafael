@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Galeria do casamento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <main class="pagina larga">
+    <header class="topo">
+      <h1 data-casal></h1>
+      <p class="data" data-data></p>
+    </header>
+
+    <section id="pedir-codigo" hidden style="max-width:34rem;margin:0 auto">
+      <form id="form-codigo">
+        <label for="codigo">Código do casamento</label>
+        <input id="codigo" type="text" autocomplete="off" autocapitalize="characters" required>
+        <button class="botao" type="submit">Abrir galeria</button>
+      </form>
+    </section>
+
+    <p class="aviso" id="aviso" role="status" style="text-align:center"></p>
+    <div class="grade" id="grade"></div>
+    <div style="max-width:20rem;margin:0 auto">
+      <button class="botao secundario" id="mais" type="button" hidden>Carregar mais fotos</button>
+      <a class="botao" href="./">Enviar minhas fotos</a>
+    </div>
+  </main>
+
+  <dialog id="visor">
+    <button class="fechar" type="button" aria-label="Fechar">×</button>
+    <img alt="">
+  </dialog>
+
+  <script type="module">
+    import { supabase, salvar, lerCodigo, urlPublica, cabecalho, mensagemErro } from "./js/comum.js";
+
+    cabecalho();
+    const $ = (id) => document.getElementById(id);
+    let codigo = lerCodigo();
+    let ultima = null;
+    const POR_PAGINA = 40;
+
+    async function carregar() {
+      $("mais").disabled = true;
+      $("aviso").textContent = "Carregando…"; $("aviso").classList.remove("erro");
+      const { data, error } = await supabase.rpc("listar_fotos", { p_codigo: codigo, p_limite: POR_PAGINA, p_antes: ultima });
+      if (error) {
+        $("aviso").textContent = mensagemErro(error); $("aviso").classList.add("erro");
+        if (String(error.message).includes("codigo_invalido")) { salvar("casamento:codigo", null); codigo = null; $("pedir-codigo").hidden = false; }
+        $("mais").disabled = false; return;
+      }
+      $("pedir-codigo").hidden = true;
+      $("aviso").textContent = !ultima && !data.length ? "Ainda não há fotos. Seja o primeiro a enviar!" : "";
+      for (const f of data) {
+        const fig = document.createElement("figure");
+        const btn = document.createElement("button");
+        const img = new Image();
+        img.src = urlPublica(f.caminho); img.loading = "lazy"; img.alt = `Foto enviada por ${f.nome}`;
+        btn.append(img);
+        btn.addEventListener("click", () => abrir(img.src, f.nome));
+        fig.append(btn); $("grade").append(fig);
+      }
+      if (data.length) ultima = data[data.length - 1].criado_em;
+      $("mais").hidden = data.length < POR_PAGINA;
+      $("mais").disabled = false;
+    }
+
+    function abrir(src, nome) {
+      const d = $("visor");
+      d.querySelector("img").src = src;
+      d.querySelector("img").alt = `Foto de ${nome}`;
+      d.showModal();
+    }
+    $("visor").addEventListener("click", (e) => { if (e.target.tagName !== "IMG") $("visor").close(); });
+
+    $("mais").addEventListener("click", carregar);
+    $("form-codigo").addEventListener("submit", (e) => {
+      e.preventDefault();
+      codigo = $("codigo").value.trim(); salvar("casamento:codigo", codigo);
+      ultima = null; $("grade").innerHTML = ""; carregar();
+    });
+
+    if (codigo) carregar(); else $("pedir-codigo").hidden = false;
+  </script>
+</body>
+</html>

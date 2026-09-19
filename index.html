@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fotos do casamento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <main class="pagina">
+    <header class="topo">
+      <h1 data-casal></h1>
+      <p class="data" data-data></p>
+    </header>
+
+    <!-- Passo 1: identificação (só o nome) -->
+    <section id="entrar" hidden>
+      <h2>Mande suas fotos da festa</h2>
+      <p class="suave">Cada convidado pode enviar até 20 fotos, e cada uma leva seu nome embaixo.</p>
+      <form id="form-entrar">
+        <label for="nome">Nome e sobrenome</label>
+        <input id="nome" type="text" autocomplete="name" autocapitalize="words" maxlength="80" required>
+        <button class="botao" type="submit">Entrar e escolher fotos</button>
+      </form>
+      <p class="aviso" id="aviso-entrar" role="status"></p>
+    </section>
+
+    <!-- Sem código: a pessoa não veio pelo QR code -->
+    <section id="sem-codigo" hidden>
+      <h2>Abra pelo QR code</h2>
+      <p class="suave">Use a câmera do celular no QR code que está nas mesas da festa.</p>
+    </section>
+
+    <!-- Passo 2: envio -->
+    <section id="enviar" hidden>
+      <h2 id="saudacao"></h2>
+      <p class="contador" id="contador" aria-live="polite"></p>
+
+      <div class="folha" id="folha" aria-label="Suas fotos enviadas"></div>
+
+      <label for="arquivos" class="botao" id="botao-escolher" role="button" tabindex="0">Escolher fotos</label>
+      <p class="aviso" id="aviso-enviar" role="status"></p>
+
+      <div class="links">
+        <a href="galeria.html">Ver galeria</a>
+      </div>
+    </section>
+
+    <input id="arquivos" class="visualmente-oculto" type="file" accept="image/*" multiple tabindex="-1">
+  </main>
+
+  <script type="module">
+    import { supabase, ler, salvar, lerCodigo, urlPublica, cabecalho, mensagemErro, comprimir } from "./js/comum.js";
+    import { LIMITE } from "./config.js";
+
+    cabecalho();
+    const $ = (id) => document.getElementById(id);
+    const codigo = lerCodigo();
+    // Uma vez que o nome entra neste aparelho, ele fica preso a esse nome.
+    let convidado = ler("casamento:convidado");
+    let enviadas = 0;
+    let ocupado = false;
+    let pronto = Promise.resolve();
+
+    function aviso(id, texto, erro = false) {
+      const el = $(id); el.textContent = texto; el.classList.toggle("erro", erro);
+    }
+
+    function mostrar(secao) {
+      for (const s of ["entrar", "sem-codigo", "enviar"]) $(s).hidden = s !== secao;
+    }
+
+    function montarFolha(caminhos) {
+      const folha = $("folha"); folha.innerHTML = "";
+      for (let i = 0; i < LIMITE; i++) {
+        const q = document.createElement("div");
+        q.className = "quadro";
+        q.innerHTML = `<span>${i + 1}</span>`;
+        if (caminhos[i]) preencher(q, urlPublica(caminhos[i]));
+        folha.append(q);
+      }
+    }
+
+    function preencher(quadro, src) {
+      quadro.classList.remove("enviando");
+      quadro.classList.add("cheio");
+      const img = new Image(); img.alt = ""; img.loading = "lazy"; img.src = src;
+      quadro.prepend(img);
+    }
+
+    function atualizarContador() {
+      const faltam = LIMITE - enviadas;
+      $("contador").textContent =
+        faltam === 0 ? "Você enviou suas 20 fotos. Obrigado!" :
+        faltam === 1 ? `${enviadas} enviadas. Cabe mais 1 foto.` :
+        `${enviadas} enviadas. Cabem mais ${faltam} fotos.`;
+      const bloqueado = faltam === 0 || ocupado;
+      $("arquivos").disabled = bloqueado;
+      $("botao-escolher").setAttribute("aria-disabled", String(bloqueado));
+      $("botao-escolher").textContent = ocupado ? "Enviando…" : "Escolher fotos";
+    }
+
+    async function mostrarEnviar() {
+      mostrar("enviar");
+      $("saudacao").textContent = `Olá, ${convidado.nome.split(" ")[0]}`;
+      const { data, error } = await supabase.rpc("minhas_fotos", { p_convidado: convidado.id });
+      if (error) aviso("aviso-enviar", mensagemErro(error), true);
+      const caminhos = (error ? [] : data || []).map((f) => f.caminho);
+      enviadas = caminhos.length;
+      montarFolha(caminhos);
+      atualizarContador();
+    }
+
+    async function entrar(nome) {
+      aviso("aviso-entrar", "Entrando…");
+      const { data, error } = await supabase.rpc("entrar_convidado", { p_nome: nome, p_codigo: codigo });
+      if (error || !data?.length) {
+        aviso("aviso-entrar", mensagemErro(error), true);
+        return;
+      }
+      convidado = { id: data[0].id, nome: data[0].nome };
+      salvar("casamento:convidado", convidado);
+      aviso("aviso-entrar", "");
+      await mostrarEnviar();
+    }
+
+    $("form-entrar").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const nome = $("nome").value.trim().replace(/\s+/g, " ");
+      if (nome.split(" ").length < 2) return aviso("aviso-entrar", "Digite seu nome e sobrenome.", true);
+      // Abre a escolha de fotos já no toque do botão (o navegador exige isso)
+      // enquanto o cadastro acontece em paralelo.
+      $("arquivos").disabled = false;
+      $("arquivos").click();
+      pronto = entrar(nome);
+    });
+
+    $("botao-escolher").addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && !$("arquivos").disabled) { e.preventDefault(); $("arquivos").click(); }
+    });
+
+    $("arquivos").addEventListener("change", async (e) => {
+      const escolhidas = [...e.target.files];
+      e.target.value = "";
+      if (!escolhidas.length || ocupado) return;
+      await pronto;               // espera o login terminar, se ainda estiver rodando
+      if (!convidado) return;     // login falhou: o aviso já está na tela
+
+      const livres = LIMITE - enviadas;
+      if (livres <= 0) return aviso("aviso-enviar", "Você já enviou suas 20 fotos.", true);
+      const lista = escolhidas.slice(0, livres);
+      aviso("aviso-enviar", escolhidas.length > livres
+        ? `Você escolheu ${escolhidas.length}, mas cabem só mais ${livres}. Enviando as primeiras ${livres}.`
+        : "");
+
+      ocupado = true; atualizarContador();
+      let falhas = 0;
+
+      for (const arquivo of lista) {
+        const quadro = $("folha").children[enviadas];
+        quadro.classList.add("enviando");
+        let caminho = null;
+        try {
+          const blob = await comprimir(arquivo, { assinatura: convidado.nome });
+          const r = await supabase.rpc("reservar_foto", { p_convidado: convidado.id });
+          if (r.error) throw r.error;
+          caminho = r.data;
+          const up = await supabase.storage.from("fotos").upload(caminho, blob, { contentType: "image/jpeg", upsert: false });
+          if (up.error) throw up.error;
+          preencher(quadro, URL.createObjectURL(blob));
+          enviadas++;
+          atualizarContador();
+        } catch (err) {
+          quadro.classList.remove("enviando");
+          if (caminho) await supabase.rpc("liberar_foto", { p_convidado: convidado.id, p_caminho: caminho });
+          const msg = String(err?.message || "");
+          if (msg.includes("limite_atingido")) { aviso("aviso-enviar", mensagemErro(err), true); break; }
+          if (msg.includes("convidado_invalido")) {
+            salvar("casamento:convidado", null); convidado = null; ocupado = false;
+            mostrar("entrar"); return aviso("aviso-entrar", mensagemErro(err), true);
+          }
+          falhas++;
+        }
+      }
+
+      ocupado = false; atualizarContador();
+      if (falhas) aviso("aviso-enviar", `${falhas} foto${falhas > 1 ? "s não foram enviadas" : " não foi enviada"}. Escolha de novo para tentar outra vez.`, true);
+      else if (!$("aviso-enviar").classList.contains("erro")) aviso("aviso-enviar", "Fotos enviadas!");
+    });
+
+    if (convidado?.id && codigo) mostrarEnviar();
+    else if (!codigo) mostrar("sem-codigo");
+    else mostrar("entrar");
+  </script>
+</body>
+</html>
