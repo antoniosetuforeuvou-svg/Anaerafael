@@ -213,12 +213,16 @@ body.trava { overflow: hidden; }
 .cam-rodape { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 0.9rem; }
 .cam-rodape .galeria-link { background: none; border: 0; padding: 0; font: 600 0.95rem/1 var(--sans); color: var(--ardosia); text-decoration: underline; cursor: pointer; }
 
-/* Galeria */
-.grade { columns: 2 12rem; column-gap: 10px; }
-.grade figure { margin: 0 0 10px; break-inside: avoid; }
-.grade button { display: block; width: 100%; padding: 0; border: 0; background: var(--linha); cursor: zoom-in; border-radius: 4px; overflow: hidden; }
-.grade img { width: 100%; height: auto; display: block; }
-.grade figcaption { font-size: 0.8rem; color: var(--suave); padding: 0.3rem 0.1rem 0; }
+/* Galeria — grade de miniaturas */
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; margin-bottom: 1.5rem; }
+.grade figure { margin: 0; }
+.grade button {
+  display: block; width: 100%; aspect-ratio: 1 / 1; padding: 0; border: 0;
+  background: var(--linha); cursor: zoom-in; border-radius: 8px; overflow: hidden;
+}
+.grade img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.25s ease; }
+.grade button:hover img, .grade button:focus-visible img { transform: scale(1.05); }
+@media (prefers-reduced-motion: reduce) { .grade img { transition: none; } }
 
 dialog { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 92vh; }
 dialog::backdrop { background: rgb(10 14 18 / 0.88); }
